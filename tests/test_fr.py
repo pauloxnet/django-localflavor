@@ -2,12 +2,11 @@
 from __future__ import unicode_literals
 
 from django.test import SimpleTestCase
-from localflavor.fr.forms import (
-    FRZipCodeField, FRPhoneNumberField,
-    FRDepartmentField, FRRegionField,
-    FRRegionSelect, FRDepartmentSelect,
-    FRNationalIdentificationNumber
-)
+
+from localflavor.fr.forms import (FRDepartmentField, FRDepartmentSelect, FRNationalIdentificationNumber,
+                                  FRRegion2016Select, FRRegionField, FRRegionSelect, FRSIRENField, FRSIRETField,
+                                  FRZipCodeField)
+
 
 DEP_SELECT_OUTPUT = '''
     <select name="dep">
@@ -157,9 +156,31 @@ REG_SELECT_OUTPUT = '''
     </select>
 '''
 
+REG_2016_SELECT_OUTPUT = '''
+    <select name="reg">
+        <option value="01">01 - Guadeloupe</option>
+        <option value="02">02 - Martinique</option>
+        <option value="03">03 - Guyane</option>
+        <option value="04">04 - La Réunion</option>
+        <option value="06">06 - Mayotte</option>
+        <option value="11">11 - Île-de-France</option>
+        <option value="24">24 - Centre-Val de Loire</option>
+        <option value="27">27 - Bourgogne-Franche-Comté</option>
+        <option value="28">28 - Normandie</option>
+        <option value="32">32 - Hauts-de-France</option>
+        <option value="44">44 - Grand Est</option>
+        <option value="52" selected="selected">52 - Pays de la Loire</option>
+        <option value="53">53 - Bretagne</option>
+        <option value="75">75 - Nouvelle-Aquitaine</option>
+        <option value="76">76 - Occitanie</option>
+        <option value="84">84 - Auvergne-Rhône-Alpes</option>
+        <option value="93">93 - Provence-Alpes-Côte d&#39;Azur</option>
+        <option value="94">94 - Corse</option>
+    </select>
+'''
+
 
 class FRLocalFlavorTests(SimpleTestCase):
-
     def test_FRZipCodeField(self):
         error_format = ['Enter a zip code in the format XXXXX.']
         valid = {
@@ -172,21 +193,6 @@ class FRLocalFlavorTests(SimpleTestCase):
                        '5 characters (it has 6).'] + error_format,
         }
         self.assertFieldOutput(FRZipCodeField, valid, invalid)
-
-    def test_FRPhoneNumberField(self):
-        error_format = ['Phone numbers must be in 0X XX XX XX XX format.']
-        valid = {
-            '01 55 44 58 64': '01 55 44 58 64',
-            '0155445864': '01 55 44 58 64',
-            '01 5544 5864': '01 55 44 58 64',
-            '01 55.44.58.64': '01 55 44 58 64',
-            '01.55.44.58.64': '01 55 44 58 64',
-        }
-        invalid = {
-            '01,55,44,58,64': error_format,
-            '555 015 544': error_format,
-        }
-        self.assertFieldOutput(FRPhoneNumberField, valid, invalid)
 
     def test_FRDepartmentfield(self):
         f = FRDepartmentField()
@@ -204,20 +210,104 @@ class FRLocalFlavorTests(SimpleTestCase):
         f = FRRegionSelect()
         self.assertHTMLEqual(f.render('reg', '25'), REG_SELECT_OUTPUT)
 
+    def test_FRRegion2016Select(self):
+        self.maxDiff = None
+        f = FRRegion2016Select()
+        self.assertHTMLEqual(f.render('reg', '52'), REG_2016_SELECT_OUTPUT)
+
     def test_FRNationalIdentificationNumber(self):
-        error_format = ['Enter a valid French French National Identification number.']
+        error_format = ['Enter a valid French National Identification number.']
         valid = {
             '869067543002289': '869067543002289',
-            '869069713002256': '869069713002256',   # Good Overseas
+            # Good Overseas
+            '869069713002256': '869069713002256',
+            # Good, old Corsica department number (20) with birthdate < 1976
+            '870062009002285': '870062009002285',
+            # Good, new Corsica department number (2A) with birthdate >= 1976
+            '882062A09002279': '882062A09002279',
+            # Good, new Corsica department number (2B) with birthdate >= 1976
+            '882062B09002279': '882062B09002279',
+            # Good, new Corsica department number (2B) with birthdate >= 1976 (2005)
+            '105062B09002231': '105062B09002231',
+            # Good, new Corsica department number (20) with birthdate < 1976 (1905)
+            '105062009002231': '105062009002231',
+            # Good, birth month not known (then, can be 20, [30-42] or [50-99])
+            '140200109002223': '140200109002223',
+            '141330109002285': '141330109002285',
+            '142580109002248': '142580109002248',
+            '143990109002273': '143990109002273',
         }
         invalid = {
-            '369067543002289': error_format,    # Gender mismatch
-            '869069873002289': error_format,    # Bad Department
-            '869069773002289': error_format,    # Bad overseas Department
-            '869069710002256': error_format,    # Good overseas Bad Commune
-            '869067500002289': error_format,    # Bad Commune
-            '869067543000009': error_format,    # Bad "Person Unique Number"
-            '869067543002298': error_format,    # Bad Control key
-            '869067443002289': error_format,    # Fails validation
+            # Gender mismatch
+            '369067543002289': error_format,
+            # Bad Department
+            '869069873002289': error_format,
+            # Fails, old Corsica department number (20) with birthdate > 1976
+            '880062009002280': error_format,
+            # Fails, new Corsica department number (2A) with birthdate < 1976
+            '874062A09002213': error_format,
+            # Fails, new Corsica department number (2B) with birthdate < 1976
+            '874062B09002213': error_format,
+            # Bad overseas Department
+            '869069773002289': error_format,
+            # Good overseas Bad Commune
+            '869069710002256': error_format,
+            # Bad Commune
+            '869067500002289': error_format,
+            # Bad "Person Unique Number"
+            '869067543000009': error_format,
+            # Bad Control key
+            '869067543002298': error_format,
+            # Fails validation
+            '869067443002289': error_format,
         }
         self.assertFieldOutput(FRNationalIdentificationNumber, valid, invalid)
+
+    def test_FRSIRENNumber(self):
+        error_format = ['Enter a valid French SIREN number.']
+        valid = {
+            '752932715': '752932715',
+            '752 932 715': '752932715',
+            '752-932-715': '752932715',
+        }
+        invalid = {
+            '1234': error_format,               # wrong size
+            '752932712': error_format,     # Bad luhn on SIREN
+        }
+        self.assertFieldOutput(FRSIRENField, valid, invalid)
+
+    def test_FRSIRENNumber_formatting(self):
+        siren_form_field = FRSIRENField()
+        self.assertEqual(
+            siren_form_field.prepare_value('752932715'),
+            '752 932 715')
+        self.assertEqual(
+            siren_form_field.prepare_value('752 932 715'),
+            '752 932 715')
+        self.assertIsNone(siren_form_field.prepare_value(None))
+
+    def test_FRSIRETNumber(self):
+        error_format = ['Enter a valid French SIRET number.']
+        valid = {
+            '75293271500010': '75293271500010',
+            '752 932 715 00010': '75293271500010',
+            '752-932-715-00010': '75293271500010',
+        }
+        invalid = {
+            '1234': error_format,               # wrong size
+            '75293271200017': error_format,     # Bad luhn on SIREN
+            '75293271000010': error_format,     # Bad luhn on whole
+        }
+        self.assertFieldOutput(FRSIRETField, valid, invalid)
+
+    def test_FRSIRETNumber_formatting(self):
+        siret_form_field = FRSIRETField()
+        self.assertEqual(
+            siret_form_field.prepare_value('75293271500010'),
+            '752 932 715 00010')
+        self.assertEqual(
+            siret_form_field.prepare_value('752 932 715 00010'),
+            '752 932 715 00010')
+        self.assertIsNone(siret_form_field.prepare_value(None))
+        self.assertEqual(
+            siret_form_field.clean('752 932 715 00010'), '75293271500010')

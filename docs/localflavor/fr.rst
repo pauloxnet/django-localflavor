@@ -6,6 +6,8 @@ Forms
 
 .. automodule:: localflavor.fr.forms
     :members:
+    :exclude-members: FRSIRENENumberMixin
+
 
 Data
 ----
@@ -16,3 +18,4 @@ Data
 
 .. autodata:: localflavor.fr.fr_region.REGION_CHOICES
 
+.. autodata:: localflavor.fr.fr_region.REGION_2016_CHOICES

@@ -1,4 +1,6 @@
 """
+Misspellings/abbreviations mapping.
+
 A mapping of state misspellings/abbreviations to normalized
 abbreviations, and alphabetical lists of US states, territories,
 military mail regions and non-US states to which the US provides
@@ -8,162 +10,209 @@ This exists in this standalone file so that it's only imported into memory
 when explicitly needed.
 """
 
+import operator
+
+from django.utils.functional import lazy
+from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import pgettext_lazy
+
 #: The 48 contiguous states, plus the District of Columbia.
 CONTIGUOUS_STATES = (
-    ('AL', 'Alabama'),
-    ('AZ', 'Arizona'),
-    ('AR', 'Arkansas'),
-    ('CA', 'California'),
-    ('CO', 'Colorado'),
-    ('CT', 'Connecticut'),
-    ('DE', 'Delaware'),
-    ('DC', 'District of Columbia'),
-    ('FL', 'Florida'),
-    ('GA', 'Georgia'),
-    ('ID', 'Idaho'),
-    ('IL', 'Illinois'),
-    ('IN', 'Indiana'),
-    ('IA', 'Iowa'),
-    ('KS', 'Kansas'),
-    ('KY', 'Kentucky'),
-    ('LA', 'Louisiana'),
-    ('ME', 'Maine'),
-    ('MD', 'Maryland'),
-    ('MA', 'Massachusetts'),
-    ('MI', 'Michigan'),
-    ('MN', 'Minnesota'),
-    ('MS', 'Mississippi'),
-    ('MO', 'Missouri'),
-    ('MT', 'Montana'),
-    ('NE', 'Nebraska'),
-    ('NV', 'Nevada'),
-    ('NH', 'New Hampshire'),
-    ('NJ', 'New Jersey'),
-    ('NM', 'New Mexico'),
-    ('NY', 'New York'),
-    ('NC', 'North Carolina'),
-    ('ND', 'North Dakota'),
-    ('OH', 'Ohio'),
-    ('OK', 'Oklahoma'),
-    ('OR', 'Oregon'),
-    ('PA', 'Pennsylvania'),
-    ('RI', 'Rhode Island'),
-    ('SC', 'South Carolina'),
-    ('SD', 'South Dakota'),
-    ('TN', 'Tennessee'),
-    ('TX', 'Texas'),
-    ('UT', 'Utah'),
-    ('VT', 'Vermont'),
-    ('VA', 'Virginia'),
-    ('WA', 'Washington'),
-    ('WV', 'West Virginia'),
-    ('WI', 'Wisconsin'),
-    ('WY', 'Wyoming'),
+    ('AL', _('Alabama')),
+    ('AZ', _('Arizona')),
+    ('AR', _('Arkansas')),
+    ('CA', _('California')),
+    ('CO', _('Colorado')),
+    ('CT', _('Connecticut')),
+    ('DE', _('Delaware')),
+    ('DC', _('District of Columbia')),
+    ('FL', _('Florida')),
+    ('GA', pgettext_lazy('US state', 'Georgia')),
+    ('ID', _('Idaho')),
+    ('IL', _('Illinois')),
+    ('IN', _('Indiana')),
+    ('IA', _('Iowa')),
+    ('KS', _('Kansas')),
+    ('KY', _('Kentucky')),
+    ('LA', _('Louisiana')),
+    ('ME', _('Maine')),
+    ('MD', _('Maryland')),
+    ('MA', _('Massachusetts')),
+    ('MI', _('Michigan')),
+    ('MN', _('Minnesota')),
+    ('MS', _('Mississippi')),
+    ('MO', _('Missouri')),
+    ('MT', _('Montana')),
+    ('NE', _('Nebraska')),
+    ('NV', _('Nevada')),
+    ('NH', _('New Hampshire')),
+    ('NJ', _('New Jersey')),
+    ('NM', _('New Mexico')),
+    ('NY', _('New York')),
+    ('NC', _('North Carolina')),
+    ('ND', _('North Dakota')),
+    ('OH', _('Ohio')),
+    ('OK', _('Oklahoma')),
+    ('OR', _('Oregon')),
+    ('PA', _('Pennsylvania')),
+    ('RI', _('Rhode Island')),
+    ('SC', _('South Carolina')),
+    ('SD', _('South Dakota')),
+    ('TN', _('Tennessee')),
+    ('TX', _('Texas')),
+    ('UT', _('Utah')),
+    ('VT', _('Vermont')),
+    ('VA', _('Virginia')),
+    ('WA', _('Washington')),
+    ('WV', _('West Virginia')),
+    ('WI', _('Wisconsin')),
+    ('WY', _('Wyoming')),
 )
 
-#: All 50 states, plus the District of Columbia.
-US_STATES = (
-    ('AL', 'Alabama'),
-    ('AK', 'Alaska'),
-    ('AZ', 'Arizona'),
-    ('AR', 'Arkansas'),
-    ('CA', 'California'),
-    ('CO', 'Colorado'),
-    ('CT', 'Connecticut'),
-    ('DE', 'Delaware'),
-    ('DC', 'District of Columbia'),
-    ('FL', 'Florida'),
-    ('GA', 'Georgia'),
-    ('HI', 'Hawaii'),
-    ('ID', 'Idaho'),
-    ('IL', 'Illinois'),
-    ('IN', 'Indiana'),
-    ('IA', 'Iowa'),
-    ('KS', 'Kansas'),
-    ('KY', 'Kentucky'),
-    ('LA', 'Louisiana'),
-    ('ME', 'Maine'),
-    ('MD', 'Maryland'),
-    ('MA', 'Massachusetts'),
-    ('MI', 'Michigan'),
-    ('MN', 'Minnesota'),
-    ('MS', 'Mississippi'),
-    ('MO', 'Missouri'),
-    ('MT', 'Montana'),
-    ('NE', 'Nebraska'),
-    ('NV', 'Nevada'),
-    ('NH', 'New Hampshire'),
-    ('NJ', 'New Jersey'),
-    ('NM', 'New Mexico'),
-    ('NY', 'New York'),
-    ('NC', 'North Carolina'),
-    ('ND', 'North Dakota'),
-    ('OH', 'Ohio'),
-    ('OK', 'Oklahoma'),
-    ('OR', 'Oregon'),
-    ('PA', 'Pennsylvania'),
-    ('RI', 'Rhode Island'),
-    ('SC', 'South Carolina'),
-    ('SD', 'South Dakota'),
-    ('TN', 'Tennessee'),
-    ('TX', 'Texas'),
-    ('UT', 'Utah'),
-    ('VT', 'Vermont'),
-    ('VA', 'Virginia'),
-    ('WA', 'Washington'),
-    ('WV', 'West Virginia'),
-    ('WI', 'Wisconsin'),
-    ('WY', 'Wyoming'),
+#: Non contiguous states (Not connected to mainland USA)
+NON_CONTIGUOUS_STATES = (
+    ('AK', _('Alaska')),
+    ('HI', _('Hawaii')),
 )
 
 #: Non-state territories.
 US_TERRITORIES = (
-    ('AS', 'American Samoa'),
-    ('GU', 'Guam'),
-    ('MP', 'Northern Mariana Islands'),
-    ('PR', 'Puerto Rico'),
-    ('VI', 'Virgin Islands'),
+    ('AS', _('American Samoa')),
+    ('GU', _('Guam')),
+    ('MP', _('Northern Mariana Islands')),
+    ('PR', _('Puerto Rico')),
+    ('VI', _('Virgin Islands')),
 )
 
 #: Military postal "states". Note that 'AE' actually encompasses
 #: Europe, Canada, Africa and the Middle East.
 ARMED_FORCES_STATES = (
-    ('AA', 'Armed Forces Americas'),
-    ('AE', 'Armed Forces Europe'),
-    ('AP', 'Armed Forces Pacific'),
+    ('AA', _('Armed Forces Americas')),
+    ('AE', _('Armed Forces Europe')),
+    ('AP', _('Armed Forces Pacific')),
 )
 
 #: Non-US locations serviced by USPS (under Compact of Free
 #: Association).
 COFA_STATES = (
-    ('FM', 'Federated States of Micronesia'),
-    ('MH', 'Marshall Islands'),
-    ('PW', 'Palau'),
+    ('FM', _('Federated States of Micronesia')),
+    ('MH', _('Marshall Islands')),
+    ('PW', _('Palau')),
 )
 
 #: Obsolete abbreviations (no longer US territories/USPS service, or
 #: code changed).
 OBSOLETE_STATES = (
-    ('CM', 'Commonwealth of the Northern Mariana Islands'),  # Is now 'MP'
-    ('CZ', 'Panama Canal Zone'),                             # Reverted to Panama 1979
-    ('PI', 'Philippine Islands'),                            # Philippine independence 1946
-    ('TT', 'Trust Territory of the Pacific Islands'),        # Became the independent COFA states + Northern Mariana Islands 1979-1994
+    ('CM', _('Commonwealth of the Northern Mariana Islands')),  # Is now 'MP'
+    ('CZ', _('Panama Canal Zone')),  # Reverted to Panama 1979
+    ('PI', _('Philippine Islands')),  # Philippine independence 1946
+    # Became the independent COFA states + Northern Mariana Islands 1979-1994
+    ('TT', _('Trust Territory of the Pacific Islands')),
 )
 
+US_STATES = lazy(lambda: tuple(sorted(
+    CONTIGUOUS_STATES + NON_CONTIGUOUS_STATES,
+    key=operator.itemgetter(0))), tuple)()
+"""
+This docstring is not read by Sphinx, so it has been copied to
+docs/localflavor/us.rst.
 
-#: All US states and territories plus DC and military mail.
-STATE_CHOICES = tuple(sorted(US_STATES + US_TERRITORIES + ARMED_FORCES_STATES, key=lambda obj: obj[1]))
+All US states.
 
-#: All US Postal Service locations.
-USPS_CHOICES = tuple(sorted(US_STATES + US_TERRITORIES + ARMED_FORCES_STATES + COFA_STATES, key=lambda obj: obj[1]))
+This tuple is lazily generated and may not work as expected in all cases due
+to tuple optimizations in the Python interpreter which do not account for
+lazily generated tuples.  For example::
+
+  US_STATES + ('XX', _('Select a State'))
+
+should work as expected, but::
+
+  ('XX', _('Select a State')) + US_STATES
+
+may throw:
+
+``TypeError: can only concatenate tuple (not "proxy") to tuple``
+
+due to a Python optimization that causes the concatenation to occur before
+US_STATES has been lazily generated.  To work around these issues, you
+can use a slice index (``[:]``) to force the generation of US_STATES
+before any other operations are processed by the Python interpreter::
+
+  ('XX', _('Select a State')) + US_STATES[:]
+"""
+
+STATE_CHOICES = lazy(lambda: tuple(sorted(
+    CONTIGUOUS_STATES + NON_CONTIGUOUS_STATES + US_TERRITORIES + ARMED_FORCES_STATES,
+    key=operator.itemgetter(1))), tuple)()
+"""
+This docstring is not read by Sphinx, so it has been copied to
+docs/localflavor/us.rst.
+
+All US states and territories plus DC and military mail.
+
+This tuple is lazily generated and may not work as expected in all cases due
+to tuple optimizations in the Python interpreter which do not account for
+lazily generated tuples.  For example::
+
+  STATE_CHOICES + ('XX', _('Select a State'))
+
+should work as expected, but::
+
+  ('XX', _('Select a State')) + STATE_CHOICES
+
+may throw:
+
+``TypeError: can only concatenate tuple (not "proxy") to tuple``
+
+due to a Python optimization that causes the concatenation to occur before
+STATE_CHOICES has been lazily generated.  To work around these issues, you
+can use a slice index (``[:]``) to force the generation of STATE_CHOICES
+before any other operations are processed by the Python interpreter::
+
+  ('XX', _('Select a State')) + STATE_CHOICES[:]
+"""
+
+USPS_CHOICES = lazy(lambda: tuple(sorted(
+    CONTIGUOUS_STATES + NON_CONTIGUOUS_STATES + US_TERRITORIES + ARMED_FORCES_STATES + COFA_STATES,
+    key=operator.itemgetter(1))), tuple)()
+"""
+This docstring is not read by Sphinx, so it has been copied to
+docs/localflavor/us.rst.
+
+All US Postal Service locations.
+
+This tuple is lazily generated and may not work as expected in all cases due
+to tuple optimizations in the Python interpreter which do not account for
+lazily generated tuples.  For example::
+
+  USPS_CHOICES + ('XX', _('Select a State'))
+
+should work as expected, but::
+
+  ('XX', _('Select a State')) + USPS_CHOICES
+
+may throw:
+
+``TypeError: can only concatenate tuple (not "proxy") to tuple``
+
+due to a Python optimization that causes the concatenation to occur before
+USPS_CHOICES has been lazily generated.  To work around these issues, you
+can use a slice index (``[:]``) to force the generation of USPS_CHOICES
+before any other operations are processed by the Python interpreter::
+
+  ('XX', _('Select a State')) + USPS_CHOICES[:]
+"""
 
 #: Normalized versions of state names
 STATES_NORMALIZED = {
+    'aa': 'AA',
+    'ae': 'AE',
     'ak': 'AK',
     'al': 'AL',
     'ala': 'AL',
     'alabama': 'AL',
     'alaska': 'AK',
+    'ap': 'AP',
     'american samao': 'AS',
     'american samoa': 'AS',
     'ar': 'AR',
@@ -189,9 +238,11 @@ STATES_NORMALIZED = {
     'delaware': 'DE',
     'deleware': 'DE',
     'district of columbia': 'DC',
+    'federated states of micronesia': 'FM',
     'fl': 'FL',
     'fla': 'FL',
     'florida': 'FL',
+    'fsm': 'FM',
     'ga': 'GA',
     'georgia': 'GA',
     'gu': 'GU',
@@ -221,6 +272,7 @@ STATES_NORMALIZED = {
     'marianas islands': 'MP',
     'marianas islands of the pacific': 'MP',
     'marinas islands of the pacific': 'MP',
+    'marshall islands': 'MH',
     'maryland': 'MD',
     'mass': 'MA',
     'massachusetts': 'MA',
@@ -230,6 +282,7 @@ STATES_NORMALIZED = {
     'mi': 'MI',
     'mich': 'MI',
     'michigan': 'MI',
+    'micronesia': 'FM',
     'minn': 'MN',
     'minnesota': 'MN',
     'miss': 'MS',
@@ -279,10 +332,13 @@ STATES_NORMALIZED = {
     'oreg': 'OR',
     'oregon': 'OR',
     'pa': 'PA',
+    'palau': 'PW',
     'penn': 'PA',
     'pennsylvania': 'PA',
     'pr': 'PR',
     'puerto rico': 'PR',
+    'republic of palau': 'PW',
+    'republic of the marshall islands': 'MH',
     'rhode island': 'RI',
     'ri': 'RI',
     's dak': 'SD',

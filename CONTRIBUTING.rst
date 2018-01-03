@@ -35,18 +35,13 @@ The previous command will run the tests in different combinations of Python
 the ``-l`` option::
 
     $ tox -l
-    py26-1.5
-    py26-1.6
-    py27-1.5
-    py27-1.6
-    py32-1.5
-    py32-1.6
-    py33-1.5
-    py33-1.6
+    docs
+    ...
+    py36-master
 
 You can run each environment with the ``-e`` option::
 
-    $ tox -e py27-1.6  # runs the tests only on Pyton 2.7 and Django 1.6.x
+    $ tox -e py36-1.11  # runs the tests only on Python 3.6 and Django 1.11.x
 
 Optionally you can also specify a country whose tests you want to run::
 
@@ -54,7 +49,7 @@ Optionally you can also specify a country whose tests you want to run::
 
 And combine both options::
 
-    $ COUNTRY=us tox -e py27-1.6
+    $ COUNTRY=us tox -e py36-1.11
 
-__ http://tox.readthedocs.org/en/latest/install.html
 __ https://github.com/django/django-localflavor/issues
+__ https://tox.readthedocs.io/en/latest/install.html

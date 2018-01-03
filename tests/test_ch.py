@@ -1,10 +1,10 @@
 from __future__ import unicode_literals
 
 from django.test import SimpleTestCase
-from django.utils.translation import override, ugettext as _
+from django.utils.translation import ugettext as _
+from django.utils.translation import override
 
-from localflavor.ch.forms import (CHZipCodeField, CHPhoneNumberField,
-                                  CHIdentityCardNumberField, CHStateSelect)
+from localflavor.ch.forms import CHIdentityCardNumberField, CHSocialSecurityNumberField, CHStateSelect, CHZipCodeField
 
 
 class CHLocalFlavorTests(SimpleTestCase):
@@ -43,28 +43,18 @@ class CHLocalFlavorTests(SimpleTestCase):
             self.assertHTMLEqual(f.render('state', 'AG'), out)
 
     def test_CHZipCodeField(self):
-        error_format = [_('Enter a zip code in the format XXXX.')]
+        error_format = [_('Enter a valid postal code in the range and format 1XXX - 9XXX.')]
         valid = {
             '1234': '1234',
-            '0000': '0000',
+            '9999': '9999',
         }
         invalid = {
+            '0000': error_format,
             '800x': error_format,
             '80 00': error_format,
+            '99990': error_format,
         }
         self.assertFieldOutput(CHZipCodeField, valid, invalid)
-
-    def test_CHPhoneNumberField(self):
-        error_format = [_('Phone numbers must be in 0XX XXX XX XX format.')]
-        valid = {
-            '012 345 67 89': '012 345 67 89',
-            '0123456789': '012 345 67 89',
-        }
-        invalid = {
-            '01234567890': error_format,
-            '1234567890': error_format,
-        }
-        self.assertFieldOutput(CHPhoneNumberField, valid, invalid)
 
     def test_CHIdentityCardNumberField(self):
         error_format = [_('Enter a valid Swiss identity or passport card number in X1234567<0 or 1234567890 format.')]
@@ -77,3 +67,16 @@ class CHLocalFlavorTests(SimpleTestCase):
             '2123456701': error_format,
         }
         self.assertFieldOutput(CHIdentityCardNumberField, valid, invalid)
+
+    def test_CHSocialSecurityNumberField(self):
+        error_format = [_('Enter a valid Swiss Social Security number in 756.XXXX.XXXX.XX format.')]
+        valid = {
+            '756.1234.5678.97': '756.1234.5678.97',
+            '756.9217.0769.85': '756.9217.0769.85',
+        }
+        invalid = {
+            '756.1234.5678.96': error_format,
+            '757.1234.5678.97': error_format,
+            '756.1234.5678': error_format,
+        }
+        self.assertFieldOutput(CHSocialSecurityNumberField, valid, invalid)

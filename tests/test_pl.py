@@ -2,9 +2,8 @@ from __future__ import unicode_literals
 
 from django.test import SimpleTestCase
 
-from localflavor.pl.forms import (PLProvinceSelect, PLCountySelect,
-                                  PLPostalCodeField, PLNIPField, PLPESELField,
-                                  PLNationalIDCardNumberField, PLREGONField)
+from localflavor.pl.forms import (PLCountySelect, PLNationalIDCardNumberField, PLNIPField, PLPESELField,
+                                  PLPostalCodeField, PLProvinceSelect, PLREGONField)
 
 
 class PLLocalFlavorTests(SimpleTestCase):
@@ -83,8 +82,8 @@ class PLLocalFlavorTests(SimpleTestCase):
 <option value="torunski">toru\u0144ski</option>
 <option value="tucholski">tucholski</option>
 <option value="wabrzeski">w\u0105brzeski</option>
-<option value="wloclawski">wroc\u0142awski</option>
-<option value="zninski">\u017ani\u0144ski</option>
+<option value="wloclawski">w\u0142oc\u0142awski</option>
+<option value="zninski">\u017cni\u0144ski</option>
 <option value="lublin">Lublin</option>
 <option value="biala-podlaska">Bia\u0142a Podlaska</option>
 <option value="chelm">Che\u0142m</option>
@@ -214,7 +213,7 @@ class PLLocalFlavorTests(SimpleTestCase):
 <option value="opole">Opole</option>
 <option value="brzeski">brzeski</option>
 <option value="glubczycki">g\u0142ubczyski</option>
-<option value="kedzierzynsko-kozielski">k\u0119dzierzy\u0144ski-kozielski</option>
+<option value="kedzierzynsko-kozielski">k\u0119dzierzy\u0144sko-kozielski</option>
 <option value="kluczborski">kluczborski</option>
 <option value="krapkowicki">krapkowicki</option>
 <option value="namyslowski">namys\u0142owski</option>
@@ -440,6 +439,7 @@ class PLLocalFlavorTests(SimpleTestCase):
     def test_PLPESELField(self):
         error_checksum = ['Wrong checksum for the National Identification Number.']
         error_format = ['National Identification Number consists of 11 digits.']
+        error_birthdate = ['The National Identification Number contains an invalid birth date.']
         valid = {
             '80071610614': '80071610614',
         }
@@ -447,6 +447,7 @@ class PLLocalFlavorTests(SimpleTestCase):
             '80071610610': error_checksum,
             '80': error_format,
             '800716106AA': error_format,
+            '98765432121': error_birthdate,
         }
         self.assertFieldOutput(PLPESELField, valid, invalid)
 

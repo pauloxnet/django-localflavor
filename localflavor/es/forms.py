@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
-"""
-Spanish-specific Form helpers
-"""
+"""Spanish-specific Form helpers."""
 
-from __future__ import absolute_import, unicode_literals
+from __future__ import unicode_literals
 
 import re
 
-from django.core.validators import EMPTY_VALUES
 from django.forms import ValidationError
 from django.forms.fields import RegexField, Select
+from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 from .es_provinces import PROVINCE_CHOICES
@@ -23,34 +21,13 @@ class ESPostalCodeField(RegexField):
     Spanish postal code is a five digits string, with two first digits
     between 01 and 52, assigned to provinces code.
     """
+
     default_error_messages = {
         'invalid': _('Enter a valid postal code in the range and format 01XXX - 52XXX.'),
     }
 
-    def __init__(self, max_length=None, min_length=None, *args, **kwargs):
-        super(ESPostalCodeField, self).__init__(
-            r'^(0[1-9]|[1-4][0-9]|5[0-2])\d{3}$',
-            max_length, min_length, *args, **kwargs)
-
-
-class ESPhoneNumberField(RegexField):
-    """
-    A form field that validates its input as a Spanish phone number.
-    Information numbers are ommited.
-
-    Spanish phone numbers are nine digit numbers, where first digit is 6 (for
-    cell phones), 8 (for special phones), or 9 (for landlines and special
-    phones)
-
-    TODO: accept and strip characters like dot, hyphen... in phone number
-    """
-    default_error_messages = {
-        'invalid': _('Enter a valid phone number in one of the formats 6XXXXXXXX, 8XXXXXXXX or 9XXXXXXXX.'),
-    }
-
-    def __init__(self, max_length=None, min_length=None, *args, **kwargs):
-        super(ESPhoneNumberField, self).__init__(r'^(6|7|8|9)\d{8}$',
-                                                 max_length, min_length, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(ESPostalCodeField, self).__init__(r'^(0[1-9]|[1-4][0-9]|5[0-2])\d{3}$', *args, **kwargs)
 
 
 class ESIdentityCardNumberField(RegexField):
@@ -71,7 +48,13 @@ class ESIdentityCardNumberField(RegexField):
     can be a number or a letter depending on company type. Algorithm is not
     public, and different authors have different opinions on which ones allows
     letters, so both validations are assumed true for all types.
+
+    http://es.wikipedia.org/wiki/N%C3%BAmero_de_identificaci%C3%B3n_fiscal
+
+    .. versionchanged:: 1.1
+
     """
+
     default_error_messages = {
         'invalid': _('Please enter a valid NIF, NIE, or CIF.'),
         'invalid_only_nif': _('Please enter a valid NIF or NIE.'),
@@ -80,36 +63,45 @@ class ESIdentityCardNumberField(RegexField):
         'invalid_cif': _('Invalid checksum for CIF.'),
     }
 
-    def __init__(self, only_nif=False, max_length=None, min_length=None, *args, **kwargs):
+    def __init__(self, only_nif=False, *args, **kwargs):
         self.only_nif = only_nif
         self.nif_control = 'TRWAGMYFPDXBNJZSQVHLCKE'
         self.cif_control = 'JABCDEFGHI'
-        self.cif_types = 'ABCDEFGHJKLMNPQS'
-        self.nie_types = 'XT'
-        id_card_re = re.compile(r'^([%s]?)[ -]?(\d+)[ -]?([%s]?)$' % (self.cif_types + self.nie_types, self.nif_control + self.cif_control), re.IGNORECASE)
-        super(ESIdentityCardNumberField, self).__init__(
-            id_card_re, max_length, min_length,
-            error_message=self.default_error_messages['invalid%s' % (self.only_nif and '_only_nif' or '')], *args, **kwargs)
+        self.cif_types = 'ABCDEFGHJKLMNPQRSVW'
+        self.nie_types = 'XYZ'
+        self.id_card_pattern = r'^([%s]?)[ -]?(\d+)[ -]?([%s]?)$'
+        id_card_re = re.compile(self.id_card_pattern %
+                                (self.cif_types + self.nie_types,
+                                 self.nif_control + self.cif_control),
+                                re.IGNORECASE)
+
+        error_messages = kwargs.get('error_messages') or {}
+        error_messages['invalid'] = self.default_error_messages['invalid%s' % (self.only_nif and '_only_nif' or '')]
+        kwargs['error_messages'] = error_messages
+
+        super(ESIdentityCardNumberField, self).__init__(id_card_re, *args, **kwargs)
 
     def clean(self, value):
         super(ESIdentityCardNumberField, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
-        nif_get_checksum = lambda d: self.nif_control[int(d) % 23]
+        if value in self.empty_values:
+            return self.empty_value
 
         value = value.upper().replace(' ', '').replace('-', '')
-        m = re.match(r'^([%s]?)[ -]?(\d+)[ -]?([%s]?)$' % (self.cif_types + self.nie_types, self.nif_control + self.cif_control), value)
+        m = re.match(self.id_card_pattern %
+                     (self.cif_types + self.nie_types,
+                      self.nif_control + self.cif_control),
+                     value)
         letter1, number, letter2 = m.groups()
 
         if not letter1 and letter2:
             # NIF
-            if letter2 == nif_get_checksum(number):
+            if letter2 == self.nif_get_checksum(number):
                 return value
             else:
                 raise ValidationError(self.error_messages['invalid_nif'])
         elif letter1 in self.nie_types and letter2:
             # NIE
-            if letter2 == nif_get_checksum(number):
+            if letter2 == self.nif_get_checksum(six.text_type(self.nie_types.index(letter1)) + number):
                 return value
             else:
                 raise ValidationError(self.error_messages['invalid_nie'])
@@ -125,11 +117,13 @@ class ESIdentityCardNumberField(RegexField):
         else:
             raise ValidationError(self.error_messages['invalid'])
 
+    def nif_get_checksum(self, d):
+        return self.nif_control[int(d) % 23]
+
 
 class ESCCCField(RegexField):
     """
-    A form field that validates its input as a Spanish bank account or CCC
-    (Codigo Cuenta Cliente).
+    A form field that validates its input as a Spanish bank account or CCC (Codigo Cuenta Cliente).
 
         Spanish CCC is in format EEEE-OOOO-CC-AAAAAAAAAA where:
 
@@ -146,44 +140,44 @@ class ESCCCField(RegexField):
         string 1, 2, 4, 8, 5, 10, 9, 7, 3, 6. Sum resulting numbers and extract
         it from 11.  Result is checksum except when 10 then is 1, or when 11
         then is 0.
-
-        TODO: allow IBAN validation too
     """
+
     default_error_messages = {
         'invalid': _('Please enter a valid bank account number in format XXXX-XXXX-XX-XXXXXXXXXX.'),
         'checksum': _('Invalid checksum for bank account number.'),
     }
 
-    def __init__(self, max_length=None, min_length=None, *args, **kwargs):
-        super(ESCCCField, self).__init__(r'^\d{4}[ -]?\d{4}[ -]?\d{2}[ -]?\d{10}$',
-                                         max_length, min_length, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(ESCCCField, self).__init__(r'^\d{4}[ -]?\d{4}[ -]?\d{2}[ -]?\d{10}$', *args, **kwargs)
 
     def clean(self, value):
         super(ESCCCField, self).clean(value)
-        if value in EMPTY_VALUES:
-            return ''
-        control_str = [1, 2, 4, 8, 5, 10, 9, 7, 3, 6]
+        if value in self.empty_values:
+            return self.empty_value
         m = re.match(r'^(\d{4})[ -]?(\d{4})[ -]?(\d{2})[ -]?(\d{10})$', value)
         entity, office, checksum, account = m.groups()
-        get_checksum = lambda d: str(11 - sum([int(digit) * int(control) for digit, control in zip(d, control_str)]) % 11).replace('10', '1').replace('11', '0')
         if get_checksum('00' + entity + office) + get_checksum(account) == checksum:
             return value
         else:
             raise ValidationError(self.error_messages['checksum'])
 
 
+def get_checksum(d):
+    control_str = [1, 2, 4, 8, 5, 10, 9, 7, 3, 6]
+    digits = [int(digit) * int(control) for digit, control in zip(d, control_str)]
+    return str(11 - sum(digits) % 11).replace('10', '1').replace('11', '0')
+
+
 class ESRegionSelect(Select):
-    """
-    A Select widget that uses a list of spanish regions as its choices.
-    """
+    """A Select widget that uses a list of spanish regions as its choices."""
+
     def __init__(self, attrs=None):
         super(ESRegionSelect, self).__init__(attrs, choices=REGION_CHOICES)
 
 
 class ESProvinceSelect(Select):
-    """
-    A Select widget that uses a list of spanish provinces as its choices.
-    """
+    """A Select widget that uses a list of spanish provinces as its choices."""
+
     def __init__(self, attrs=None):
         super(ESProvinceSelect, self).__init__(attrs, choices=PROVINCE_CHOICES)
 
